@@ -14,6 +14,7 @@ import json
 import logging
 import shutil
 from pathlib import Path
+from typing import Optional
 
 log = logging.getLogger("jarvis.work_mode")
 
@@ -29,8 +30,8 @@ class WorkSession:
 
     def __init__(self):
         self._active = False
-        self._working_dir: str | None = None
-        self._project_name: str | None = None
+        self._working_dir: Optional[str] = None
+        self._project_name: Optional[str] = None
         self._message_count = 0  # Track if this is first message (no --continue)
         self._status = "idle"  # idle, working, done
 
@@ -39,7 +40,7 @@ class WorkSession:
         return self._active
 
     @property
-    def project_name(self) -> str | None:
+    def project_name(self) -> Optional[str]:
         return self._project_name
 
     @property

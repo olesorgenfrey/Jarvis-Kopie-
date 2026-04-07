@@ -2404,7 +2404,7 @@ class KeyUpdate(BaseModel):
     key_value: str
 
 class KeyTest(BaseModel):
-    key_value: str | None = None
+    key_value: Optional[str] = None
 
 class PreferencesUpdate(BaseModel):
     user_name: str = ""
