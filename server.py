@@ -1639,7 +1639,10 @@ async def _lookup_and_report(lookup_type: str, lookup_fn, ws, history: list[dict
         # Speak the result — skip audio if user spoke recently to avoid collision
         if voice_state and time.time() - voice_state["last_user_time"] < 3:
             log.info(f"Skipping lookup audio for {lookup_type} — user spoke recently")
-            # Result is still stored in history below
+            try:
+                await ws.send_json({"type": "status", "state": "idle"})
+            except Exception:
+                pass
         else:
             tts = strip_markdown_for_tts(result_text)
             audio = await synthesize_speech(tts)
@@ -1673,6 +1676,10 @@ async def _lookup_and_report(lookup_type: str, lookup_fn, ws, history: list[dict
     except Exception as e:
         _active_lookups[lookup_id]["status"] = "error"
         log.warning(f"Lookup {lookup_type} failed: {e}")
+        try:
+            await ws.send_json({"type": "status", "state": "idle"})
+        except Exception:
+            pass
     finally:
         # Clean up after 60s
         await asyncio.sleep(60)
