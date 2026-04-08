@@ -123,6 +123,8 @@ socket.onMessage((msg) => {
     }
     // Log text for debugging
     if (msg.text) console.log("[JARVIS]", msg.text);
+  } else if (type === "request_screenshot") {
+    captureAndSendScreenshot();
   } else if (type === "status") {
     const state = msg.state as string;
     if (state === "thinking" && currentState !== "thinking") {
@@ -219,6 +221,46 @@ btnFixSelf.addEventListener("click", (e) => {
   socket.send({ type: "fix_self" });
   statusEl.textContent = "entering work mode...";
 });
+
+// ---------------------------------------------------------------------------
+// Screen capture
+// ---------------------------------------------------------------------------
+
+async function captureAndSendScreenshot() {
+  try {
+    const stream = await (navigator.mediaDevices as any).getDisplayMedia({ video: true, audio: false });
+    const track = stream.getVideoTracks()[0];
+    const canvas = document.createElement("canvas");
+    const settings = track.getSettings();
+    canvas.width = settings.width || 1920;
+    canvas.height = settings.height || 1080;
+
+    // Use ImageCapture if available, otherwise video element
+    if ((window as any).ImageCapture) {
+      const imageCapture = new (window as any).ImageCapture(track);
+      const bitmap = await imageCapture.grabFrame();
+      track.stop();
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(bitmap, 0, 0);
+    } else {
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      await video.play();
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d")!.drawImage(video, 0, 0);
+      track.stop();
+    }
+
+    const dataUrl = canvas.toDataURL("image/png");
+    socket.send({ type: "screenshot", data: dataUrl });
+  } catch (e) {
+    console.warn("[screenshot] failed:", e);
+    socket.send({ type: "screenshot", data: "" });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Log Viewer

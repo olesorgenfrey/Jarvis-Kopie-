@@ -1992,6 +1992,38 @@ async def voice_handler(ws: WebSocket):
                     await ws.send_json({"type": "text", "text": response_text})
                 continue
 
+            # ── Browser screenshot from getDisplayMedia ──
+            if msg.get("type") == "screenshot":
+                img_data = msg.get("data", "")
+                if img_data and anthropic_client:
+                    try:
+                        await ws.send_json({"type": "status", "state": "thinking"})
+                        # Strip data URL prefix if present
+                        if "," in img_data:
+                            img_data = img_data.split(",", 1)[1]
+                        resp = await anthropic_client.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=300,
+                            messages=[{"role": "user", "content": [
+                                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": img_data}},
+                                {"type": "text", "text": "Describe what's on this screen briefly and helpfully, as JARVIS would to Tony Stark. Max 2 sentences."}
+                            ]}]
+                        )
+                        result = resp.content[0].text.strip()
+                        history.append({"role": "assistant", "content": f"[screen]: {result}"})
+                        audio = await synthesize_speech(result)
+                        await ws.send_json({"type": "status", "state": "speaking"})
+                        if audio:
+                            await ws.send_json({"type": "audio", "data": base64.b64encode(audio).decode(), "text": result})
+                        else:
+                            await ws.send_json({"type": "text", "text": result})
+                        await ws.send_json({"type": "status", "state": "idle"})
+                        log.info(f"Screenshot described: {result[:80]}")
+                    except Exception as e:
+                        log.warning(f"Screenshot analysis failed: {e}")
+                        await ws.send_json({"type": "status", "state": "idle"})
+                continue
+
             if msg.get("type") != "transcript" or not msg.get("isFinal"):
                 continue
 
@@ -2154,7 +2186,8 @@ async def voice_handler(ws: WebSocket):
                         elif action["action"] == "describe_screen":
                             import platform as _platform
                             if _platform.system() != "Darwin":
-                                response_text = "I'm afraid screen access isn't available when running on the server, sir. That feature requires running locally on your Mac."
+                                await ws.send_json({"type": "request_screenshot"})
+                                response_text = "Please share your screen, sir."
                             else:
                                 active = [v for v in _active_lookups.values() if v["type"] == "screen" and v["status"] == "working"]
                                 if active:
