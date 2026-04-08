@@ -2145,7 +2145,6 @@ async def voice_handler(ws: WebSocket):
                 # ── CHAT MODE: fast keyword detection + Haiku ──
                 else:
                     action = detect_action_fast(user_text)
-                    is_background_lookup = False
 
                     if action:
                         if action["action"] == "open_terminal":
@@ -2153,16 +2152,17 @@ async def voice_handler(ws: WebSocket):
                         elif action["action"] == "show_recent":
                             response_text = await handle_show_recent()
                         elif action["action"] == "describe_screen":
-                            response_text = "Taking a look now, sir."
-                            is_background_lookup = True
-                            asyncio.create_task(_lookup_and_report("screen", _do_screen_lookup, ws, history=history, voice_state=voice_state))
+                            active = [v for v in _active_lookups.values() if v["type"] == "screen" and v["status"] == "working"]
+                            if active:
+                                response_text = "Still checking your screen, sir."
+                            else:
+                                response_text = "Taking a look now, sir."
+                                asyncio.create_task(_lookup_and_report("screen", _do_screen_lookup, ws, history=history, voice_state=voice_state))
                         elif action["action"] == "check_calendar":
                             response_text = "Checking your calendar now, sir."
-                            is_background_lookup = True
                             asyncio.create_task(_lookup_and_report("calendar", _do_calendar_lookup, ws, history=history, voice_state=voice_state))
                         elif action["action"] == "check_mail":
                             response_text = "Checking your inbox now, sir."
-                            is_background_lookup = True
                             asyncio.create_task(_lookup_and_report("mail", _do_mail_lookup, ws, history=history, voice_state=voice_state))
                         elif action["action"] == "check_dispatch":
                             recent = dispatch_registry.get_most_recent()
@@ -2366,8 +2366,6 @@ async def voice_handler(ws: WebSocket):
                 audio = await synthesize_speech(tts)
                 if audio:
                     await ws.send_json({"type": "audio", "data": base64.b64encode(audio).decode(), "text": response_text})
-                    if is_background_lookup:
-                        await ws.send_json({"type": "status", "state": "working"})
                 else:
                     await ws.send_json({"type": "text", "text": response_text})
                     await ws.send_json({"type": "status", "state": "idle"})

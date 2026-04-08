@@ -18,7 +18,6 @@ import "./style.css";
 type State = "idle" | "listening" | "thinking" | "speaking";
 let currentState: State = "idle";
 let isMuted = false;
-let pendingLookup = false;
 
 const statusEl = document.getElementById("status-text")!;
 const errorEl = document.getElementById("error-text")!;
@@ -99,9 +98,7 @@ const voiceInput = createVoiceInput(
 // ---------------------------------------------------------------------------
 
 audioPlayer.onFinished(() => {
-  if (!pendingLookup) {
-    transition("idle");
-  }
+  transition("idle");
 });
 
 // ---------------------------------------------------------------------------
@@ -131,11 +128,9 @@ socket.onMessage((msg) => {
     if (state === "thinking" && currentState !== "thinking") {
       transition("thinking");
     } else if (state === "working") {
-      pendingLookup = true;
       transition("thinking");
       statusEl.textContent = "working...";
     } else if (state === "idle") {
-      pendingLookup = false;
       transition("idle");
     }
   } else if (type === "text") {
