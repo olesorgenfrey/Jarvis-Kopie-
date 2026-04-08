@@ -221,6 +221,52 @@ btnFixSelf.addEventListener("click", (e) => {
   statusEl.textContent = "entering work mode...";
 });
 
+// ---------------------------------------------------------------------------
+// Log Viewer
+// ---------------------------------------------------------------------------
+
+const logsContainer = document.getElementById("logs-container")!;
+const logsOutput = document.getElementById("logs-output")!;
+const btnLogsClose = document.getElementById("btn-logs-close")!;
+const btnLogsClear = document.getElementById("btn-logs-clear")!;
+const btnLogs = document.getElementById("btn-logs")!;
+
+let logsSocket: WebSocket | null = null;
+
+function openLogs() {
+  logsContainer.classList.add("open");
+  if (!logsSocket || logsSocket.readyState !== WebSocket.OPEN) {
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    logsSocket = new WebSocket(`${proto}//${window.location.host}/ws/logs`);
+    logsSocket.onmessage = (e) => {
+      if (e.data === "ping") return;
+      const line = document.createElement("div");
+      line.className = "log-line";
+      const text = e.data as string;
+      if (text.includes("ERROR") || text.includes("error")) line.classList.add("error");
+      else if (text.includes("WARNING") || text.includes("warn")) line.classList.add("warn");
+      else line.classList.add("info");
+      line.textContent = text;
+      logsOutput.appendChild(line);
+      logsOutput.scrollTop = logsOutput.scrollHeight;
+    };
+  }
+}
+
+function closeLogs() {
+  logsContainer.classList.remove("open");
+}
+
+btnLogs.addEventListener("click", (e) => {
+  e.stopPropagation();
+  menuDropdown.style.display = "none";
+  openLogs();
+});
+
+btnLogsClose.addEventListener("click", closeLogs);
+btnLogsClear.addEventListener("click", () => { logsOutput.innerHTML = ""; });
+logsContainer.querySelector(".logs-backdrop")!.addEventListener("click", closeLogs);
+
 // Text input
 const textInput = document.getElementById("text-input") as HTMLInputElement;
 const btnSend = document.getElementById("btn-send")!;

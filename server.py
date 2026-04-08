@@ -57,6 +57,32 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message
 log = logging.getLogger("jarvis")
 
 # ---------------------------------------------------------------------------
+# Log broadcaster — streams log lines to connected /ws/logs clients
+# ---------------------------------------------------------------------------
+
+_log_clients: set = set()
+_log_buffer: list = []  # last 200 lines for new connections
+
+class _WsBroadcastHandler(logging.Handler):
+    def emit(self, record: logging.LogRecord):
+        line = self.format(record)
+        _log_buffer.append(line)
+        if len(_log_buffer) > 200:
+            _log_buffer.pop(0)
+        for ws in list(_log_clients):
+            try:
+                import asyncio as _asyncio
+                loop = _asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(ws.send_text(line))
+            except Exception:
+                _log_clients.discard(ws)
+
+_ws_handler = _WsBroadcastHandler()
+_ws_handler.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(message)s"))
+logging.getLogger().addHandler(_ws_handler)
+
+# ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 
@@ -2505,6 +2531,22 @@ async def api_save_preferences(body: PreferencesUpdate):
 # ---------------------------------------------------------------------------
 # Control endpoints (restart, fix-self)
 # ---------------------------------------------------------------------------
+
+@app.websocket("/ws/logs")
+async def logs_handler(ws: WebSocket):
+    await ws.accept()
+    _log_clients.add(ws)
+    try:
+        for line in _log_buffer:
+            await ws.send_text(line)
+        while True:
+            await asyncio.sleep(30)
+            await ws.send_text("ping")
+    except Exception:
+        pass
+    finally:
+        _log_clients.discard(ws)
+
 
 @app.post("/api/restart")
 async def api_restart():

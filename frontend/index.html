@@ -28,6 +28,7 @@
     <!-- Dropdown menu -->
     <div id="menu-dropdown" style="display:none">
       <button id="btn-settings">Settings</button>
+      <button id="btn-logs">Logs</button>
       <button id="btn-restart">Restart Server</button>
       <button id="btn-fix-self">Fix Yourself</button>
     </div>
@@ -43,6 +44,21 @@
     </div>
     <div id="jarvis-label">JARVIS</div>
     <div id="error-text"></div>
+    <!-- Log Viewer Panel -->
+    <div id="logs-container">
+      <div class="logs-backdrop"></div>
+      <div class="logs-panel">
+        <div class="logs-header">
+          <h2>Logs</h2>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button id="btn-logs-clear" class="settings-btn">Clear</button>
+            <button id="btn-logs-close" class="settings-close">×</button>
+          </div>
+        </div>
+        <div id="logs-output"></div>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
