@@ -2152,12 +2152,16 @@ async def voice_handler(ws: WebSocket):
                         elif action["action"] == "show_recent":
                             response_text = await handle_show_recent()
                         elif action["action"] == "describe_screen":
-                            active = [v for v in _active_lookups.values() if v["type"] == "screen" and v["status"] == "working"]
-                            if active:
-                                response_text = "Still checking your screen, sir."
+                            import platform as _platform
+                            if _platform.system() != "Darwin":
+                                response_text = "I'm afraid screen access isn't available when running on the server, sir. That feature requires running locally on your Mac."
                             else:
-                                response_text = "Taking a look now, sir."
-                                asyncio.create_task(_lookup_and_report("screen", _do_screen_lookup, ws, history=history, voice_state=voice_state))
+                                active = [v for v in _active_lookups.values() if v["type"] == "screen" and v["status"] == "working"]
+                                if active:
+                                    response_text = "Still checking your screen, sir."
+                                else:
+                                    response_text = "Taking a look now, sir."
+                                    asyncio.create_task(_lookup_and_report("screen", _do_screen_lookup, ws, history=history, voice_state=voice_state))
                         elif action["action"] == "check_calendar":
                             response_text = "Checking your calendar now, sir."
                             asyncio.create_task(_lookup_and_report("calendar", _do_calendar_lookup, ws, history=history, voice_state=voice_state))
