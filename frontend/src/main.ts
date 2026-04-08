@@ -221,6 +221,31 @@ btnFixSelf.addEventListener("click", (e) => {
   statusEl.textContent = "entering work mode...";
 });
 
+// Text input
+const textInput = document.getElementById("text-input") as HTMLInputElement;
+const btnSend = document.getElementById("btn-send")!;
+
+function sendTextInput() {
+  const text = textInput.value.trim();
+  if (!text) return;
+  audioPlayer.stop();
+  socket.send({ type: "transcript", text, isFinal: true });
+  textInput.value = "";
+  transition("thinking");
+}
+
+btnSend.addEventListener("click", (e) => {
+  e.stopPropagation();
+  sendTextInput();
+});
+
+textInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    sendTextInput();
+  }
+});
+
 // Settings button
 const btnSettings = document.getElementById("btn-settings")!;
 btnSettings.addEventListener("click", (e) => {
