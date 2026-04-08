@@ -308,15 +308,76 @@ btnLogsClose.addEventListener("click", closeLogs);
 btnLogsClear.addEventListener("click", () => { logsOutput.innerHTML = ""; });
 logsContainer.querySelector(".logs-backdrop")!.addEventListener("click", closeLogs);
 
+// ---------------------------------------------------------------------------
+// Image upload
+// ---------------------------------------------------------------------------
+
+const btnImage = document.getElementById("btn-image") as HTMLButtonElement;
+const imageFileInput = document.getElementById("image-file-input") as HTMLInputElement;
+const imagePreviewBar = document.getElementById("image-preview-bar") as HTMLDivElement;
+const imagePreview = document.getElementById("image-preview") as HTMLImageElement;
+const btnImageRemove = document.getElementById("btn-image-remove") as HTMLButtonElement;
+let pendingImageData: string | null = null;
+
+function setImage(dataUrl: string) {
+  pendingImageData = dataUrl;
+  imagePreview.src = dataUrl;
+  imagePreviewBar.style.display = "flex";
+  btnImage.classList.add("has-image");
+}
+
+function clearImage() {
+  pendingImageData = null;
+  imagePreview.src = "";
+  imagePreviewBar.style.display = "none";
+  btnImage.classList.remove("has-image");
+  imageFileInput.value = "";
+}
+
+btnImage.addEventListener("click", (e) => {
+  e.stopPropagation();
+  imageFileInput.click();
+});
+
+btnImageRemove.addEventListener("click", (e) => {
+  e.stopPropagation();
+  clearImage();
+});
+
+imageFileInput.addEventListener("change", () => {
+  const file = imageFileInput.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => setImage(e.target!.result as string);
+  reader.readAsDataURL(file);
+});
+
+// Drag & drop onto the whole page
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const file = e.dataTransfer?.files?.[0];
+  if (file && file.type.startsWith("image/")) {
+    const reader = new FileReader();
+    reader.onload = (ev) => setImage(ev.target!.result as string);
+    reader.readAsDataURL(file);
+  }
+});
+
 // Text input
 const textInput = document.getElementById("text-input") as HTMLInputElement;
 const btnSend = document.getElementById("btn-send")!;
 
 function sendTextInput() {
   const text = textInput.value.trim();
-  if (!text) return;
+  if (!text && !pendingImageData) return;
   audioPlayer.stop();
-  socket.send({ type: "transcript", text, isFinal: true });
+  if (pendingImageData) {
+    socket.send({ type: "image", data: pendingImageData, prompt: text });
+    clearImage();
+  } else {
+    socket.send({ type: "transcript", text, isFinal: true });
+  }
   textInput.value = "";
   transition("thinking");
 }

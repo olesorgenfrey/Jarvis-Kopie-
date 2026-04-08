@@ -1992,6 +1992,42 @@ async def voice_handler(ws: WebSocket):
                     await ws.send_json({"type": "text", "text": response_text})
                 continue
 
+            # ── User-uploaded image ──
+            if msg.get("type") == "image":
+                img_data = msg.get("data", "")
+                prompt = msg.get("prompt", "").strip() or "Describe what's in this image."
+                if img_data and anthropic_client:
+                    try:
+                        await ws.send_json({"type": "status", "state": "thinking"})
+                        if "," in img_data:
+                            media_type = img_data.split(";")[0].split(":")[1] if ";" in img_data else "image/png"
+                            img_data = img_data.split(",", 1)[1]
+                        else:
+                            media_type = "image/png"
+                        resp = await anthropic_client.messages.create(
+                            model="claude-haiku-4-5-20251001",
+                            max_tokens=300,
+                            messages=[{"role": "user", "content": [
+                                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": img_data}},
+                                {"type": "text", "text": prompt}
+                            ]}]
+                        )
+                        result = resp.content[0].text.strip()
+                        history.append({"role": "user", "content": f"[image uploaded]: {prompt}"})
+                        history.append({"role": "assistant", "content": result})
+                        audio = await synthesize_speech(strip_markdown_for_tts(result))
+                        await ws.send_json({"type": "status", "state": "speaking"})
+                        if audio:
+                            await ws.send_json({"type": "audio", "data": base64.b64encode(audio).decode(), "text": result})
+                        else:
+                            await ws.send_json({"type": "text", "text": result})
+                        await ws.send_json({"type": "status", "state": "idle"})
+                        log.info(f"Image analyzed: {result[:80]}")
+                    except Exception as e:
+                        log.warning(f"Image analysis failed: {e}")
+                        await ws.send_json({"type": "status", "state": "idle"})
+                continue
+
             # ── Browser screenshot from getDisplayMedia ──
             if msg.get("type") == "screenshot":
                 img_data = msg.get("data", "")
