@@ -1489,9 +1489,11 @@ def detect_action_fast(text: str) -> dict | None:
         return None  # Long messages are conversation, not commands
 
     # Screen requests — checked BEFORE project matching to prevent misrouting
-    if any(p in t for p in ["look at my screen", "what's on my screen", "whats on my screen",
+    if any(p in t for p in ["look at my screen", "look on my screen", "look at the screen",
+                             "what's on my screen", "whats on my screen",
                              "what am i looking at", "what do you see", "see my screen",
-                             "what's running on my", "whats running on my", "check my screen"]):
+                             "what's running on my", "whats running on my", "check my screen",
+                             "guck auf", "schau auf", "look at this", "what's open", "whats open"]):
         return {"action": "describe_screen"}
 
     # Terminal / Claude Code — explicit open requests
@@ -1717,6 +1719,9 @@ async def _do_mail_lookup() -> str:
 
 async def _do_screen_lookup() -> str:
     """Screen describe — runs in thread."""
+    import platform
+    if platform.system() != "Darwin":
+        return "I'm afraid screen access isn't available on this server, sir. That feature requires running locally on your Mac."
     if anthropic_client:
         return await describe_screen(anthropic_client)
     windows = await get_active_windows()
