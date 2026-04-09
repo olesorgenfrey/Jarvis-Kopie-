@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Venture — Business Intelligence</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0f;
+      color: #e2e2e8;
+      font-family: Georgia, serif;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .logo {
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.3em;
+      color: #6366f1;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    header h1 {
+      font-size: 1.9rem;
+      font-weight: normal;
+      letter-spacing: 0.05em;
+      color: #f0f0f5;
+    }
+
+    header p {
+      margin-top: 0.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.78rem;
+      color: #555566;
+      letter-spacing: 0.1em;
+    }
+
+    /* Input area */
+    .input-section {
+      background: #0d0d14;
+      border: 1px solid #1e1e2e;
+      border-radius: 6px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      color: #6366f1;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    textarea {
+      width: 100%;
+      background: #080810;
+      border: 1px solid #1e1e2e;
+      border-radius: 4px;
+      color: #e2e2e8;
+      font-family: Georgia, serif;
+      font-size: 1rem;
+      padding: 0.9rem 1rem;
+      resize: vertical;
+      min-height: 90px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus { border-color: #6366f1; }
+    textarea::placeholder { color: #33334a; }
+
+    .btn {
+      margin-top: 1rem;
+      background: #6366f1;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      letter-spacing: 0.15em;
+      padding: 0.75rem 1.8rem;
+      text-transform: uppercase;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .btn:hover:not(:disabled) { background: #4f52d8; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Loading */
+    #loading {
+      display: none;
+      text-align: center;
+      padding: 2.5rem 1rem;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 2px solid #1e1e2e;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1.2rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #phase-text {
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      color: #6366f1;
+    }
+
+    /* Error */
+    #error {
+      display: none;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 4px;
+      color: #ef4444;
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Results */
+    #results { display: none; }
+
+    .card {
+      background: #0d0d14;
+      border: 1px solid #1e1e2e;
+      border-radius: 6px;
+      padding: 1.4rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      color: #555566;
+      text-transform: uppercase;
+      margin-bottom: 0.9rem;
+    }
+
+    /* Zusammenfassung */
+    #summary-text {
+      line-height: 1.65;
+      color: #c8c8d8;
+    }
+
+    /* Risiko */
+    .risk-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .risk-badge {
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      padding: 0.3rem 0.75rem;
+      border-radius: 3px;
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    .risk-hoch  { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .risk-mittel { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+    .risk-niedrig { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+
+    .risk-score {
+      font-family: 'Courier New', monospace;
+      font-size: 1.1rem;
+      color: #e2e2e8;
+    }
+
+    .progress-track {
+      height: 4px;
+      background: #1e1e2e;
+      border-radius: 2px;
+      margin-bottom: 1.2rem;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.8s ease;
+    }
+
+    .risk-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .risk-col-title {
+      font-family: 'Courier New', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .risk-col-title.red { color: #ef4444; }
+    .risk-col-title.green { color: #22c55e; }
+
+    .risk-list {
+      list-style: none;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: #b0b0c0;
+    }
+
+    .risk-list li::before {
+      content: "— ";
+      color: #555566;
+    }
+
+    /* Markt */
+    .market-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .market-item {}
+
+    .market-label {
+      font-family: 'Courier New', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      color: #555566;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+
+    .market-value {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #c8c8d8;
+    }
+
+    /* Konkurrenten Tabelle */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    thead tr {
+      border-bottom: 1px solid #1e1e2e;
+    }
+
+    th {
+      font-family: 'Courier New', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      color: #555566;
+      text-transform: uppercase;
+      text-align: left;
+      padding: 0 0.75rem 0.75rem 0;
+    }
+
+    td {
+      padding: 0.7rem 0.75rem 0.7rem 0;
+      color: #c8c8d8;
+      vertical-align: top;
+      border-bottom: 1px solid #12121c;
+      line-height: 1.45;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    td:first-child { color: #e2e2e8; font-weight: bold; }
+
+    /* Nächster Schritt */
+    .next-step-card {
+      border-color: #6366f1;
+      background: rgba(99,102,241,0.04);
+    }
+
+    #next-step-text {
+      font-size: 1rem;
+      line-height: 1.65;
+      color: #c8c8d8;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .risk-cols, .market-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">⬡ VENTURE</div>
+      <h1>Business Intelligence</h1>
+      <p>AI-gestützte Analyse · Echtzeit-Marktdaten · Risikoauswertung</p>
+    </header>
+
+    <div class="input-section">
+      <label for="idea">Geschäftsidee</label>
+      <textarea id="idea" placeholder="Beschreibe deine Geschäftsidee…"></textarea>
+      <button class="btn" id="analyze-btn" onclick="analyze()">→ ANALYSIEREN</button>
+    </div>
+
+    <div id="error"></div>
+
+    <div id="loading">
+      <div class="spinner"></div>
+      <div id="phase-text">Idee wird analysiert…</div>
+    </div>
+
+    <div id="results">
+      <!-- Zusammenfassung -->
+      <div class="card">
+        <div class="card-title">Zusammenfassung</div>
+        <p id="summary-text"></p>
+      </div>
+
+      <!-- Risiko -->
+      <div class="card">
+        <div class="card-title">Risikobewertung</div>
+        <div class="risk-header">
+          <span class="risk-badge" id="risk-badge"></span>
+          <span class="risk-score" id="risk-score"></span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-bar" id="risk-bar"></div>
+        </div>
+        <div class="risk-cols">
+          <div>
+            <div class="risk-col-title red">Risiken</div>
+            <ul class="risk-list" id="risk-reasons"></ul>
+          </div>
+          <div>
+            <div class="risk-col-title green">Chancen</div>
+            <ul class="risk-list" id="risk-chances"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Markt -->
+      <div class="card">
+        <div class="card-title">Marktdaten</div>
+        <div class="market-grid">
+          <div class="market-item">
+            <div class="market-label">Marktgröße</div>
+            <div class="market-value" id="market-size"></div>
+          </div>
+          <div class="market-item">
+            <div class="market-label">Wachstum</div>
+            <div class="market-value" id="market-growth"></div>
+          </div>
+          <div class="market-item">
+            <div class="market-label">Nachfrage</div>
+            <div class="market-value" id="market-demand"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Konkurrenten -->
+      <div class="card">
+        <div class="card-title">Konkurrenten</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Was</th>
+                <th>Preis</th>
+                <th>Schwäche</th>
+              </tr>
+            </thead>
+            <tbody id="competitors-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Nächster Schritt -->
+      <div class="card next-step-card">
+        <div class="card-title">Nächster Schritt</div>
+        <p id="next-step-text"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const phases = [
+      'Idee wird analysiert…',
+      'Konkurrenten werden gesucht…',
+      'Marktdaten werden ausgewertet…',
+      'Risiko wird berechnet…',
+    ];
+
+    let phaseInterval = null;
+
+    function startLoadingPhases() {
+      let i = 0;
+      const el = document.getElementById('phase-text');
+      el.textContent = phases[0];
+      phaseInterval = setInterval(() => {
+        i = (i + 1) % phases.length;
+        el.textContent = phases[i];
+      }, 1800);
+    }
+
+    function stopLoadingPhases() {
+      clearInterval(phaseInterval);
+    }
+
+    function setLoading(on) {
+      const btn = document.getElementById('analyze-btn');
+      const loading = document.getElementById('loading');
+      const results = document.getElementById('results');
+      const error = document.getElementById('error');
+
+      btn.disabled = on;
+      loading.style.display = on ? 'block' : 'none';
+      if (on) {
+        results.style.display = 'none';
+        error.style.display = 'none';
+        startLoadingPhases();
+      } else {
+        stopLoadingPhases();
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = '⚠ ' + msg;
+      el.style.display = 'block';
+    }
+
+    function renderResults(data) {
+      // Zusammenfassung
+      document.getElementById('summary-text').textContent = data.zusammenfassung || '—';
+
+      // Risiko
+      const level = (data.risiko?.level || 'mittel').toLowerCase();
+      const score = data.risiko?.score ?? 50;
+
+      const badge = document.getElementById('risk-badge');
+      badge.textContent = level;
+      badge.className = 'risk-badge risk-' + (level === 'hoch' ? 'hoch' : level === 'niedrig' ? 'niedrig' : 'mittel');
+
+      document.getElementById('risk-score').textContent = score + ' / 100';
+
+      const bar = document.getElementById('risk-bar');
+      const barColor = level === 'hoch' ? '#ef4444' : level === 'niedrig' ? '#22c55e' : '#f59e0b';
+      bar.style.background = barColor;
+      bar.style.width = '0%';
+      setTimeout(() => { bar.style.width = score + '%'; }, 50);
+
+      const reasons = document.getElementById('risk-reasons');
+      reasons.innerHTML = (data.risiko?.gruende || []).map(g => `<li>${g}</li>`).join('');
+
+      const chances = document.getElementById('risk-chances');
+      chances.innerHTML = (data.risiko?.chancen || []).map(c => `<li>${c}</li>`).join('');
+
+      // Markt
+      document.getElementById('market-size').textContent = data.markt?.groesse || '—';
+      document.getElementById('market-growth').textContent = data.markt?.wachstum || '—';
+      document.getElementById('market-demand').textContent = data.markt?.nachfrage || '—';
+
+      // Konkurrenten
+      const tbody = document.getElementById('competitors-tbody');
+      tbody.innerHTML = (data.konkurrenten || []).map(k => `
+        <tr>
+          <td>${k.name || '—'}</td>
+          <td>${k.was || '—'}</td>
+          <td>${k.preis || '—'}</td>
+          <td>${k.schwaeche || '—'}</td>
+        </tr>
+      `).join('');
+
+      // Nächster Schritt
+      document.getElementById('next-step-text').textContent = data.naechster_schritt || '—';
+
+      document.getElementById('results').style.display = 'block';
+    }
+
+    async function analyze() {
+      const idea = document.getElementById('idea').value.trim();
+      if (!idea) {
+        showError('Bitte gib eine Geschäftsidee ein.');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const res = await fetch('http://localhost:8000/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idea }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || `HTTP ${res.status}`);
+        }
+
+        renderResults(data);
+      } catch (e) {
+        showError(e.message || 'Verbindungsfehler — läuft der Backend-Server?');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Allow Enter+Ctrl/Cmd to submit
+    document.getElementById('idea').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) analyze();
+    });
+  </script>
+</body>
+</html>
