@@ -239,10 +239,18 @@ function hideScreenSharePrompt() {
 
 btnShareScreen.addEventListener("click", async () => {
   hideScreenSharePrompt();
-  await captureAndSendScreenshot();
+  const ok = await captureAndSendScreenshot();
+  if (!ok) {
+    // Offer image upload as fallback
+    showError("Screen sharing failed — you can upload a screenshot instead.");
+  }
 });
 
-async function captureAndSendScreenshot() {
+async function captureAndSendScreenshot(): Promise<boolean> {
+  if (!(navigator.mediaDevices as any)?.getDisplayMedia) {
+    showError("Screen sharing not supported in this browser.");
+    return false;
+  }
   try {
     const stream = await (navigator.mediaDevices as any).getDisplayMedia({ video: true, audio: false });
     const track = stream.getVideoTracks()[0];
@@ -276,9 +284,15 @@ async function captureAndSendScreenshot() {
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     socket.send({ type: "screenshot", data: dataUrl });
     transition("thinking");
-  } catch (e) {
+    return true;
+  } catch (e: any) {
     console.warn("[screenshot] failed:", e);
+    if (e?.name !== "NotAllowedError") {
+      // NotAllowedError = user cancelled, not an error
+      showError(`Screen capture error: ${e?.message || e}`);
+    }
     socket.send({ type: "screenshot", data: "" });
+    return false;
   }
 }
 
