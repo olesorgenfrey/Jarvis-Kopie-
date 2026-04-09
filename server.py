@@ -2034,14 +2034,19 @@ async def voice_handler(ws: WebSocket):
                 if img_data and anthropic_client:
                     try:
                         await ws.send_json({"type": "status", "state": "thinking"})
-                        # Strip data URL prefix if present
+                        # Detect media type and strip data URL prefix
+                        media_type = "image/jpeg"
                         if "," in img_data:
-                            img_data = img_data.split(",", 1)[1]
+                            header, img_data = img_data.split(",", 1)
+                            if "png" in header:
+                                media_type = "image/png"
+                            elif "webp" in header:
+                                media_type = "image/webp"
                         resp = await anthropic_client.messages.create(
                             model="claude-haiku-4-5-20251001",
                             max_tokens=300,
                             messages=[{"role": "user", "content": [
-                                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": img_data}},
+                                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": img_data}},
                                 {"type": "text", "text": "Describe what's on this screen briefly and helpfully, as JARVIS would to Tony Stark. Max 2 sentences."}
                             ]}]
                         )

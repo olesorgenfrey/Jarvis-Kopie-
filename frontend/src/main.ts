@@ -124,7 +124,7 @@ socket.onMessage((msg) => {
     // Log text for debugging
     if (msg.text) console.log("[JARVIS]", msg.text);
   } else if (type === "request_screenshot") {
-    captureAndSendScreenshot();
+    showScreenSharePrompt();
   } else if (type === "status") {
     const state = msg.state as string;
     if (state === "thinking" && currentState !== "thinking") {
@@ -226,36 +226,56 @@ btnFixSelf.addEventListener("click", (e) => {
 // Screen capture
 // ---------------------------------------------------------------------------
 
+const screenSharePrompt = document.getElementById("screen-share-prompt")!;
+const btnShareScreen = document.getElementById("btn-share-screen")!;
+
+function showScreenSharePrompt() {
+  screenSharePrompt.style.display = "block";
+}
+
+function hideScreenSharePrompt() {
+  screenSharePrompt.style.display = "none";
+}
+
+btnShareScreen.addEventListener("click", async () => {
+  hideScreenSharePrompt();
+  await captureAndSendScreenshot();
+});
+
 async function captureAndSendScreenshot() {
   try {
     const stream = await (navigator.mediaDevices as any).getDisplayMedia({ video: true, audio: false });
     const track = stream.getVideoTracks()[0];
     const canvas = document.createElement("canvas");
-    const settings = track.getSettings();
-    canvas.width = settings.width || 1920;
-    canvas.height = settings.height || 1080;
 
-    // Use ImageCapture if available, otherwise video element
+    // Use ImageCapture if available (more reliable)
     if ((window as any).ImageCapture) {
       const imageCapture = new (window as any).ImageCapture(track);
       const bitmap = await imageCapture.grabFrame();
       track.stop();
       canvas.width = bitmap.width;
       canvas.height = bitmap.height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(bitmap, 0, 0);
+      canvas.getContext("2d")!.drawImage(bitmap, 0, 0);
     } else {
+      // Fallback: video element — wait for metadata + first frame
       const video = document.createElement("video");
+      video.muted = true;
       video.srcObject = stream;
+      await new Promise<void>((resolve) => {
+        video.onloadedmetadata = () => resolve();
+      });
       await video.play();
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Wait for a frame to actually render
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
       canvas.getContext("2d")!.drawImage(video, 0, 0);
       track.stop();
     }
 
-    const dataUrl = canvas.toDataURL("image/png");
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     socket.send({ type: "screenshot", data: dataUrl });
+    transition("thinking");
   } catch (e) {
     console.warn("[screenshot] failed:", e);
     socket.send({ type: "screenshot", data: "" });
