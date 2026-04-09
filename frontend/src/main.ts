@@ -237,12 +237,13 @@ function hideScreenSharePrompt() {
   screenSharePrompt.style.display = "none";
 }
 
-btnShareScreen.addEventListener("click", async () => {
+btnShareScreen.addEventListener("click", async (e) => {
+  e.stopPropagation();
+  console.log("[screenshot] button clicked");
   hideScreenSharePrompt();
   const ok = await captureAndSendScreenshot();
   if (!ok) {
-    // Offer image upload as fallback
-    showError("Screen sharing failed — you can upload a screenshot instead.");
+    showError("Screen sharing failed — upload a screenshot instead.");
   }
 });
 
@@ -286,11 +287,8 @@ async function captureAndSendScreenshot(): Promise<boolean> {
     transition("thinking");
     return true;
   } catch (e: any) {
-    console.warn("[screenshot] failed:", e);
-    if (e?.name !== "NotAllowedError") {
-      // NotAllowedError = user cancelled, not an error
-      showError(`Screen capture error: ${e?.message || e}`);
-    }
+    console.warn("[screenshot] failed:", e?.name, e?.message, e);
+    showError(`Screen capture: ${e?.name || "error"} — ${e?.message || e}`);
     socket.send({ type: "screenshot", data: "" });
     return false;
   }
